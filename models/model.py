@@ -13,16 +13,12 @@ user = Table(
     'users',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('username', String, unique=True, index=True),
     Column('password', String),
     Column('email', String, unique=True, index=True),
-    Column('first_name', String),
-    Column('last_name', String),
-    Column('address', String),
+    Column('name', String),
     Column('phone_number', String),
-    Column('is_admin',Boolean),
+    Column('is_admin',Boolean,default=False),
     Column('date_joined', TIMESTAMP, default=datetime.utcnow),
-    Column('last_login', TIMESTAMP),
 )
 
 # Book Table
@@ -89,15 +85,6 @@ review = Table(
     Column('review_date', TIMESTAMP, default=datetime.utcnow)
 )
 
-# Category Table
-category = Table(
-    'categories',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('category_name', String, index=True),
-    Column('description', String),
-)
-
 
 # Payment Table
 payment = Table(
@@ -140,30 +127,30 @@ image_items = Table(
 )
 
 #Age categories
+age_categories = Table(
+    'age_category',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('ages', String, unique=True, index=True),
+    Column('number_of_books', Integer, default=0)
+)
+
+
 categories = Table(
     'category',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('ages', String, unique=True, index=True),
-    Column('number_of_books', Integer)
+    Column('age_category_id', Integer, ForeignKey('age_category.id')),
+    Column('categories', String, unique=True, index=True),
+    Column('number_of_books', Integer, default=0)
 )
 
-#genres
-Genres = Table(
-    'genre',
+books_category = Table(
+    'book_category',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('category_id', Integer, ForeignKey('category.id')),
-    Column('genres', String, unique=True, index=True),
-    Column('number_of_books', Integer)
-)
-
-books_genres = Table(
-    'books_genre',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('book_id', Integer, ForeignKey('books.id')),
-    Column('genre_id', Integer, ForeignKey('genre.id'))
+    Column('books_id', Integer, ForeignKey('books.id')),
+    Column('category_id', Integer, ForeignKey('category.id'))
 )
 
 
