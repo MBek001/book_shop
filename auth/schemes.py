@@ -38,3 +38,10 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+class AllUserInfo(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone_number: str
+    is_admin: bool
+    # date_joined: datetime

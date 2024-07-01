@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.model import *
 from database import get_async_session
-from auth.schemes import UserLogin, UserDb, UserRegister, GetUSerInfo
+from auth.schemes import UserLogin, UserDb, UserRegister, GetUSerInfo, AllUserInfo
 from utilities import *
 
 
@@ -127,6 +127,25 @@ async def get_user_info(
     return result.fetchall()
 
 
+
+@register_router.get('/all_users_info', response_model=List[AllUserInfo])
+async def get_users(
+        session: AsyncSession = Depends(get_async_session),
+        token: dict = Depends(verify_token)
+):
+    print('token', token)
+    user_id = token.get('user_id')
+    admin = await session.execute(
+        select(user).where(
+            (user.c.id == user_id) &
+            (user.c.is_admin==True)
+        )
+    )
+    print(user_id)
+    if not admin.scalar():
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
+    result = await session.execute(select(user))
+    return result.fetchall()
 
 
 

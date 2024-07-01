@@ -2,7 +2,7 @@ import enum
 from sqlalchemy import Table, MetaData, Column, String, Integer, Text, Boolean, Date, ForeignKey, Float, DECIMAL, Enum, \
     TIMESTAMP, DATETIME
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from datetime import datetime, date
 
 Base = declarative_base()
 metadata = MetaData()
@@ -18,7 +18,7 @@ user = Table(
     Column('name', String),
     Column('phone_number', String),
     Column('is_admin',Boolean,default=False),
-    Column('date_joined', TIMESTAMP, default=datetime.utcnow),
+    Column('date_joined', Date, default=date.today),
 )
 
 # Book Table
@@ -28,14 +28,14 @@ book = Table(
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('title', String, index=True),
     Column('author', String, index=True),
-    Column('publication_date', TIMESTAMP),
+    Column('publication_date', Date),
     Column('genre', String),
-    Column('description', String),
-    Column('price', Float),
-    Column('quantity', Integer),
-    Column('language', String),
-    Column('average_rating', Float),
-    Column('number_of_reviews', Integer)
+    Column('description', String, default='description is not available'),
+    Column('price', Float, default=0),
+    Column('quantity', Integer, default=0),
+    Column('language', String, default="Russian"),
+    Column('average_rating', Float, default=0),
+    Column('number_of_reviews', Integer, default=0)
 )
 
 # Wishlist Table
@@ -45,7 +45,7 @@ wishlist = Table(
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('user_id', Integer, ForeignKey('users.id')),
     Column('book_id', Integer, ForeignKey('books.id')),
-    Column('number_of_books_left', Integer),
+    Column('number_of_books_left', Integer, default=0),
     Column('date_created', TIMESTAMP, default=datetime.utcnow)
 )
 
@@ -67,10 +67,9 @@ shopping_cart = Table(
     'shopping_cart',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('user_id', Integer, ForeignKey('users.id')),
     Column('book_id', Integer, ForeignKey('books.id')),
     Column('quantity', Integer),
-    Column('price_per_unit', Float),
-    Column('total_price', Float)
 )
 
 # Review Table
