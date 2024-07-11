@@ -20,6 +20,19 @@ class UserRegister(BaseModel):
             raise HTTPException(detail='Enter phone number correctly !', status_code=400)
         return v
 
+class UserEditProfile(BaseModel):
+    phone_number:str
+
+    @validator('phone_number')
+    def validate_phone_number(cls, v):
+        try:
+            parsed_number = phonenumbers.parse(v)
+            if not phonenumbers.is_valid_number(parsed_number):
+                raise HTTPException(detail='Enter phone number correctly !', status_code=400)
+        except phonenumbers.phonenumberutil.NumberParseException:
+            raise HTTPException(detail='Enter phone number correctly !', status_code=400)
+        return v
+
 
 class UserDb(BaseModel):
     name: str

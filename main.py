@@ -6,67 +6,19 @@ from starlette import status
 from fastapi import FastAPI, APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth.auth import register_router
 from utilities import verify_token
 from database import get_async_session
 from models.model import user, book, shopping_cart, review
 from scheme import *
+
+from auth.auth import register_router
 from category.category import category_router
+from books.books import book_router
+
 
 app = FastAPI()
-router = APIRouter()
+router = APIRouter(tags=['main'])
 
-
-@router.post('/add-book')
-async def add_book(
-        title: str,
-        author: str,
-        publication_date: str,
-        quantity: int,
-        genre: BookGenreEnum,
-        description: str,
-        price: float,
-        language: BookLanguageEnum,
-        token: dict = Depends(verify_token),
-        session: AsyncSession = Depends(get_async_session)
-):
-    if token is None:
-        return HTTPException(status_code=403, detail='Forbidden')
-    user_id = token.get('user_id')
-    result = await session.execute(
-        select(user).where(
-            (user.c.id == user_id) &
-            (user.c.is_admin == True)
-        )
-    )
-    if not result.scalar():
-        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
-
-    existing_book = await session.execute(
-        select(book).where(
-            (book.c.title == title) &
-            (book.c.author == author)
-        )
-    )
-    if existing_book.scalar():
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Book already exists')
-
-    selected_date = parse(publication_date).date()
-
-    query = book.insert().values(
-        title= title,
-        author= author,
-        publication_date=selected_date,
-        genre= str(genre.value),
-        description= description,
-        price= price,
-        quantity= quantity,
-        language= str(language.value)
-    )
-    await session.execute(query)
-    await session.commit()
-
-    return {"message": "Book added successfully"}
 
 
 @router.post('/add-to-cart')
@@ -244,7 +196,9 @@ async def get_shopping_cart(token: dict = Depends(verify_token), session: AsyncS
 
 
 
-app.include_router(register_router, prefix='/auth')
-app.include_router(router)
+app.include_router(register_router, prefix='/auth', tags=['auth'])
 app.include_router(category_router, prefix='/category')
+app.include_router(book_router, prefix='/book')
+app.include_router(router)
+
 

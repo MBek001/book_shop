@@ -1,19 +1,20 @@
+from typing import List
+
 from fastapi import FastAPI, APIRouter,HTTPException, Depends,status
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy import select, update,insert
+from sqlalchemy import select, update,insert, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from utilities import generate_token, verify_token
 from database import get_async_session
-from models.model import age_categories, user, categories
+from models.model import age_categories, user, categories, books_category
 
-
-
-from category.scheme import AgesEnum,CategoryScheme
+from category.scheme import AgesEnum,CategoryEnum, CategoryList
 
 
 app = FastAPI
 
-category_router = APIRouter()
+
+category_router = APIRouter(tags=['category'])
 
 
 @category_router.post('/add_age_category')
@@ -45,7 +46,8 @@ async def add_age_category(
 
 @category_router.post('/add_category')
 async def add_category(
-        category_data: CategoryScheme,
+        age_category: AgesEnum,
+        category_data: CategoryEnum,
         session: AsyncSession = Depends(get_async_session),
         token: dict = Depends(verify_token)
 ):
@@ -62,13 +64,69 @@ async def add_category(
         if not admin.scalar():
             raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-        query = insert(categories).values(
-            age_category_id=category_data.age_category_id,
-            categories=category_data.category_name
-        )
-        await session.execute(query)
-        await session.commit()
-        return {'success': True, 'message': f'Category added successfully!'}
+        category_query = select(categories.c.id).where(categories.c.category_name == category_data.value)
+        category_result = await session.execute(category_query)
+        existing_category_id = category_result.scalar()
+
+        # Insert category_data into categories table
+        if existing_category_id is None:
+            # Insert category_data into categories table if it doesn't exist
+            category_insert_query = insert(categories).values(
+                category_name=category_data.value
+            ).returning(categories.c.id)
+            result = await session.execute(category_insert_query)
+            category_id = result.scalar()
+        else:
+            # Use the existing category_id if category already exists
+            category_id = existing_category_id
+
+        age_category_query = select(age_categories.c.id).where(age_categories.c.ages == age_category.value)
+        age_category_result = await session.execute(age_category_query)
+        age_category_id = age_category_result.scalar()
+
+        if age_category_id:
+            existing_entry_query = select(books_category.c.id).where(
+                and_(
+                    books_category.c.age_id == age_category_id,
+                    books_category.c.category_id == category_id
+                )
+            )
+            existing_entry_result = await session.execute(existing_entry_query)
+            existing_entry = existing_entry_result.scalar()
+
+            if existing_entry:
+                raise HTTPException(status_code=400,detail='This subcategory is already in this age category ')
+
+            books_category_query = insert(books_category).values(
+                age_id=age_category_id,
+                category_id=category_id
+            )
+            await session.execute(books_category_query)
+            await session.commit()
+
+            return {'success': True, 'message': 'Category added successfully!'}
+        else:
+            raise HTTPException(status_code=400, detail='Age category does not exist')
+
     except IntegrityError:
         await session.rollback()
         raise HTTPException(status_code=400, detail='Category already exists')
+
+
+
+@category_router.get('/all_categories', response_model=List[CategoryList])
+async def get_categories(
+        session: AsyncSession = Depends(get_async_session),
+        token: dict = Depends(verify_token)
+):
+    if token is None:
+        return HTTPException(status_code=403, detail='Forbidden')
+    user_id = token.get('user_id')
+    usr = await session.execute(
+        select(user).
+        where(user.c.id == user_id))
+
+    if not usr.scalar():
+        raise HTTPException(status_code=403, detail='Forbidden')
+    all_category = await session.execute(select(categories))
+    return all_category.fetchall()

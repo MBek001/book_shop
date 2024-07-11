@@ -29,13 +29,11 @@ book = Table(
     Column('title', String, index=True),
     Column('author', String, index=True),
     Column('publication_date', Date),
-    Column('genre', String),
+    Column('category',String),
     Column('description', String, default='description is not available'),
     Column('price', Float, default=0),
     Column('quantity', Integer, default=0),
     Column('language', String, default="Russian"),
-    Column('average_rating', Float, default=0),
-    Column('number_of_reviews', Integer, default=0)
 )
 
 # Wishlist Table
@@ -130,8 +128,7 @@ age_categories = Table(
     'age_category',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('ages', String, unique=True, index=True),
-    Column('number_of_books', Integer, default=0)
+    Column('ages', String, unique=True, index=True)
 )
 
 
@@ -139,16 +136,14 @@ categories = Table(
     'category',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('age_category_id', Integer, ForeignKey('age_category.id')),
-    Column('categories', String, unique=True, index=True),
-    Column('number_of_books', Integer, default=0)
+    Column('category_name', String, unique=True, index=True),
 )
 
 books_category = Table(
-    'book_category',
+    'categories_in_ages',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('books_id', Integer, ForeignKey('books.id')),
+    Column('age_id', Integer, ForeignKey('age_category.id')),
     Column('category_id', Integer, ForeignKey('category.id'))
 )
 

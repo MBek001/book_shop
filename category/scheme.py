@@ -10,6 +10,25 @@ class AgesEnum(enum.Enum):
     six_to_nine = "for children from 6 to 9 ages"
     ten_to_fourteen = "for children from 10 to 15 ages"
 
-class CategoryScheme(BaseModel):
-    age_category_id: int
+
+class CategoryEnum(enum.Enum):
+    Fairy_tales = 'Сказки/Стихи/Рассказы'
+    Interactive_books = 'Интерактивные книги'
+    developmental_books = 'Развивающие пособия'
+    Encyclopedias = 'Энциклопедии'
+    Creation = 'Творчество-лепка/раскраски/наклейки '
+    Developmental='Развивающие-игры/игрушки '
+    English_books='Книги на английском языке'
+    Toy_books='Книжки/Игрушки-музыкальные/деревянные/мягкие'
+    Science_and_tech = 'Наука и техника'
+    Puzzles='Пазлы'
+
+
+class CategoryList(BaseModel):
+    id: int
     category_name: str
+
+
+
+
+

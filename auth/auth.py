@@ -2,7 +2,7 @@ import re
 from typing import List
 from fastapi import APIRouter, FastAPI,Depends,status, HTTPException
 from sqlalchemy import select, update, insert, delete
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.model import *
 from database import get_async_session
@@ -10,13 +10,12 @@ from auth.schemes import UserLogin, UserDb, UserRegister, GetUSerInfo, AllUserIn
 from utilities import *
 
 
-
 from passlib.context import CryptContext
 
 app = FastAPI(title='Task', version='1.0.0')
 pwd_contex = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
-register_router = APIRouter()
+register_router = APIRouter(tags=['auth'])
 
 
 
@@ -28,13 +27,17 @@ async def register(
     if user_data.password1 == user_data.password2:
         email_exists = await session.execute(select(user).where(user.c.email == user_data.email))
         email_exists_value = email_exists.scalar()
+        phone_exists = await session.execute(select(user).where(user.c.phone_number == user_data.phone_number))
+        phone_exists_value = phone_exists.scalar()
+
+        if phone_exists_value is not None:
+            return {'success': False, 'message': 'Phone number already exists!'}
 
         if email_exists_value is not None:
             return {'success': False, 'message': 'Email already exists!'}
 
         hash_password = pwd_contex.hash(user_data.password1)
 
-        # checking database users there are users or not
         result = await session.execute(select(user.c.id))
         first_user = result.scalar()
         if first_user is None:
@@ -49,7 +52,6 @@ async def register(
         return {'success': True, 'message': "Account created successfully ✅"}
     else:
         raise HTTPException(status_code=400, detail="Passwords are not the same ❗️")
-
 
 
 @register_router.post('/login')
@@ -69,11 +71,12 @@ async def login(
         else:
             return {'success': False, 'message': 'Email or Password is not correct ❗️'}
 
+
+
 @register_router.patch('/edit-profile')
 async def edit_profile(
         email: str = None,
         name: str = None,
-        phone_number: str = None,
         session: AsyncSession = Depends(get_async_session),
         token: dict = Depends(verify_token)
 
@@ -87,6 +90,13 @@ async def edit_profile(
         result = await session.execute(query)
         user_data = result.scalar_one_or_none()
 
+        if email is not None:
+            email_exists = await session.execute(
+                select(user).where(user.c.email == email)
+            )
+            if email_exists.scalar():
+                raise HTTPException(status_code=400, detail='Email already exists')
+
         update_values = {}
         if email is not None:
             update_values['email'] = email
@@ -94,13 +104,8 @@ async def edit_profile(
         if name is not None:
             update_values['name'] = name
 
-        if phone_number is not None:
-            if re.match(r'^\+\d{11}$', phone_number):
-                update_values['phone_number'] = phone_number
-            else:
-                raise HTTPException(status_code=400, detail='Enter phone number correctly')
-
         if update_values:
+
             query = update(user).where(user.c.id == user_data).values(**update_values)
             await session.execute(query)
             await session.commit()
@@ -133,7 +138,6 @@ async def get_users(
         session: AsyncSession = Depends(get_async_session),
         token: dict = Depends(verify_token)
 ):
-    print('token', token)
     user_id = token.get('user_id')
     admin = await session.execute(
         select(user).where(
@@ -141,7 +145,6 @@ async def get_users(
             (user.c.is_admin==True)
         )
     )
-    print(user_id)
     if not admin.scalar():
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
     result = await session.execute(select(user))
