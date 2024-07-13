@@ -1,3 +1,4 @@
+import datetime
 import enum
 
 from fastapi import HTTPException
@@ -27,6 +28,17 @@ class CategoryEnum(enum.Enum):
 class CategoryList(BaseModel):
     id: int
     category_name: str
+
+class Books_in_category(BaseModel):
+    id: int
+    title: str
+    author: str
+    publication_date: datetime.date
+    category: str
+    description: str
+    price: float
+    quantity: int
+    language: str
 
 
 

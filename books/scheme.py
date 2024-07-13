@@ -1,5 +1,6 @@
 import datetime
 import enum
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -21,13 +22,14 @@ class BookLanguageEnum(enum.Enum):
 
 class BooksList(BaseModel):
     id: int
+    special_book_id: int
     title: str
     author: str
     publication_date: datetime.date
     category: str
     description: str
     price: float
+    barcode: int
     quantity: int
     language: str
-    average_rating: float
-    number_of_reviews: int
+    average_rating: Optional[float]=None,

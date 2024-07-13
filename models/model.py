@@ -26,6 +26,7 @@ book = Table(
     'books',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('special_book_id', Integer, index=True),
     Column('title', String, index=True),
     Column('author', String, index=True),
     Column('publication_date', Date),
@@ -34,6 +35,7 @@ book = Table(
     Column('price', Float, default=0),
     Column('quantity', Integer, default=0),
     Column('language', String, default="Russian"),
+    Column('barcode', String, index=True)
 )
 
 # Wishlist Table
@@ -77,8 +79,8 @@ review = Table(
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('user_id', Integer, ForeignKey('users.id')),
     Column('book_id', Integer, ForeignKey('books.id')),
-    Column('rating', Integer),
-    Column('comment', String),
+    Column('rating', Integer, default=0),
+    Column('comment', String,default='no comments yet'),
     Column('review_date', TIMESTAMP, default=datetime.utcnow)
 )
 
@@ -139,7 +141,7 @@ categories = Table(
     Column('category_name', String, unique=True, index=True),
 )
 
-books_category = Table(
+categories_in_ages = Table(
     'categories_in_ages',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),

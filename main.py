@@ -1,7 +1,7 @@
 from datetime import datetime
 from dateutil.parser import parse
 
-from sqlalchemy import update, select
+from sqlalchemy import update, select, func, desc
 from starlette import status
 from fastapi import FastAPI, APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,6 +18,56 @@ from books.books import book_router
 
 app = FastAPI()
 router = APIRouter(tags=['main'])
+
+
+@router.get('/home')
+async def home(
+        session: AsyncSession = Depends(get_async_session)
+):
+    # Query to get the books ordered by average rating
+    query = select(
+        book.c.id,
+        book.c.special_book_id,
+        book.c.title,
+        book.c.author,
+        book.c.publication_date,
+        book.c.category,
+        book.c.description,
+        book.c.price,
+        book.c.quantity,
+        book.c.language,
+        func.round(func.avg(review.c.rating), 1).label('average_rating')
+    ).join(
+        review, review.c.book_id == book.c.id, isouter=True
+    ).group_by(
+        book.c.id
+    ).order_by(
+        desc('average_rating')
+    ).limit(2)  # Adjust the limit as needed
+
+    result = await session.execute(query)
+    books = result.fetchall()
+
+    # Convert the result to a list of dictionaries
+    books_list = [
+        {
+            "id": b.id,
+            "special_book_id": b.special_book_id,
+            "title": b.title,
+            "author": b.author,
+            "publication_date": b.publication_date,
+            "category": b.category,
+            "description": b.description,
+            "price": b.price,
+            "quantity": b.quantity,
+            "language": b.language,
+            "average_rating": b.average_rating if b.average_rating is not None else 0
+        }
+        for b in books
+    ]
+
+    return ['books', books_list]
+
 
 
 
@@ -93,7 +143,9 @@ async def add_to_cart(
 
 @router.post('/add-review')
 async def add_review(
-        review_data: Review,
+        book_id: int,
+        rating:int,
+        comment: str,
         token: dict = Depends(verify_token),
         session: AsyncSession = Depends(get_async_session)
 ):
@@ -108,31 +160,25 @@ async def add_review(
         raise HTTPException(status_code=404, detail='User not found')
 
     book_result = await session.execute(
-        select(book).where(book.c.id == review_data.book_id)
+        select(book).where(book.c.id == book_id)
     )
     if not book_result.scalar():
         raise HTTPException(status_code=404, detail='Book not found')
 
-    if review_data.rating < 1 or review_data.rating > 5:
+    if rating < 1 or rating > 5:
         raise HTTPException(status_code=400, detail='Rating must be between 1 and 5')
 
     insert_query = review.insert().values(
         user_id=user_id,
-        book_id=review_data.book_id,
-        rating=review_data.rating,
-        comment=review_data.comment,
+        book_id=book_id,
+        rating=rating,
+        comment=comment,
         review_date=datetime.utcnow()
     )
     await session.execute(insert_query)
     await session.commit()
 
-    return {
-        "user_id": user_id,
-        "book_id": review_data.book_id,
-        "rating": review_data.rating,
-        "comment": review_data.comment,
-        "review_date": datetime.utcnow()
-    }
+    return {'message': 'Review added successfully'}
 
 
 @router.get('/reviews/{book_id}')

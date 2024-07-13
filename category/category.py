@@ -6,12 +6,11 @@ from sqlalchemy import select, update,insert, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from utilities import generate_token, verify_token
 from database import get_async_session
-from models.model import age_categories, user, categories, books_category
+from models.model import age_categories, user, categories, categories_in_ages,book
 
-from category.scheme import AgesEnum,CategoryEnum, CategoryList
+from category.scheme import *
 
 
-app = FastAPI
 
 
 category_router = APIRouter(tags=['category'])
@@ -85,10 +84,10 @@ async def add_category(
         age_category_id = age_category_result.scalar()
 
         if age_category_id:
-            existing_entry_query = select(books_category.c.id).where(
+            existing_entry_query = select(categories_in_ages.c.id).where(
                 and_(
-                    books_category.c.age_id == age_category_id,
-                    books_category.c.category_id == category_id
+                    categories_in_ages.c.age_id == age_category_id,
+                    categories_in_ages.c.category_id == category_id
                 )
             )
             existing_entry_result = await session.execute(existing_entry_query)
@@ -97,7 +96,7 @@ async def add_category(
             if existing_entry:
                 raise HTTPException(status_code=400,detail='This subcategory is already in this age category ')
 
-            books_category_query = insert(books_category).values(
+            books_category_query = insert(categories_in_ages).values(
                 age_id=age_category_id,
                 category_id=category_id
             )
@@ -121,6 +120,19 @@ async def get_categories(
 ):
     if token is None:
         return HTTPException(status_code=403, detail='Forbidden')
+
+    all_category = await session.execute(select(categories))
+    return all_category.fetchall()
+
+
+@category_router.get('/books_in category',response_model=List[Books_in_category])
+async def get_books_in_category(
+        category_enum: CategoryEnum,
+        session: AsyncSession = Depends(get_async_session),
+        token: dict = Depends(verify_token)
+):
+    if token is None:
+        return HTTPException(status_code=403, detail='Forbidden')
     user_id = token.get('user_id')
     usr = await session.execute(
         select(user).
@@ -128,5 +140,5 @@ async def get_categories(
 
     if not usr.scalar():
         raise HTTPException(status_code=403, detail='Forbidden')
-    all_category = await session.execute(select(categories))
-    return all_category.fetchall()
+    books_in_category = await session.execute(select(book).where(book.c.category == category_enum.value))
+    return books_in_category.fetchall()
