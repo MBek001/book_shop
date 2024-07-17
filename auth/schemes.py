@@ -1,3 +1,6 @@
+import datetime
+from datetime import date
+
 from fastapi import HTTPException
 from pydantic import BaseModel ,EmailStr, validator
 import phonenumbers
@@ -58,3 +61,11 @@ class AllUserInfo(BaseModel):
     phone_number: str
     is_admin: bool
     # date_joined: datetime
+
+class UserList(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone_number: str
+    date_joined: date
+    is_admin: bool

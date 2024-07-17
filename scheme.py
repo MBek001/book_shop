@@ -1,5 +1,5 @@
 from typing import Optional
-from datetime import date
+from datetime import datetime
 from pydantic import BaseModel
 
 
@@ -12,10 +12,11 @@ class BooksList(BaseModel):
     special_book_id: int
     title: str
     author: str
-    publication_date: date
+    publication_date: datetime
     quantity: int
     description: Optional[str]
     price: float
     barcode: str
     language: str
     category: str
+

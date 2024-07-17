@@ -1,14 +1,15 @@
 import re
 from typing import List
-from fastapi import APIRouter, FastAPI,Depends,status, HTTPException
+from fastapi import APIRouter, FastAPI,Depends,status, Query
 from sqlalchemy import select, update, insert, delete
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 from models.model import *
 from database import get_async_session
-from auth.schemes import UserLogin, UserDb, UserRegister, GetUSerInfo, AllUserInfo
+from auth.schemes import UserLogin, UserDb, UserRegister, GetUSerInfo, AllUserInfo, UserList
 from utilities import *
-
+from typing import Optional
+from sqlalchemy.sql import or_
 
 from passlib.context import CryptContext
 
@@ -115,6 +116,75 @@ async def edit_profile(
 
     return {'success': True, 'message': 'Profile updated successfully!'}
 
+
+@register_router.get('/search-user', response_model=list[UserList])
+async def search_users(
+        search: str = Query(None),
+        session: AsyncSession = Depends(get_async_session),
+        token: dict = Depends(verify_token)
+):
+    if token is None:
+        raise HTTPException(status_code=403, detail='Forbidden')
+
+    user_id = token.get('user_id')
+
+    is_admin_query = await session.execute(select(user).where(
+        (user.c.id == user_id) &
+        (user.c.is_admin == True))
+    )
+    is_admin = is_admin_query.scalar()
+
+    if not is_admin:
+        raise HTTPException(status_code=405, detail="Method Not Allowed")
+
+    if search is None:
+        raise HTTPException(status_code=400, detail="Query parameter is required")
+
+    search_query = f"%{search}%"
+    stmt = None
+
+    if search.isdigit():
+        stmt = select(
+            user.c.id,
+            user.c.name,
+            user.c.email,
+            user.c.phone_number,
+            user.c.date_joined,
+            user.c.is_admin,
+        ).where(
+            user.c.id == int(search)
+        )
+    else:
+        stmt = select(
+            user.c.id,
+            user.c.name,
+            user.c.email,
+            user.c.phone_number,
+            user.c.date_joined,
+            user.c.is_admin,
+        ).where(
+            or_(
+                user.c.email.ilike(search_query),
+                user.c.name.ilike(search_query)
+            )
+        ).order_by(user.c.id)
+
+    result = await session.execute(stmt)
+    users_list = result.fetchall()
+
+    users_list = [
+        {
+            "id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "phone_number": u.phone_number,
+            "date_joined": u.date_joined,
+            "is_admin": u.is_admin,
+        }
+        for u in users_list
+    ]
+
+    return users_list
 
 @register_router.get('/user_info', response_model=List[GetUSerInfo])
 async def get_user_info(
