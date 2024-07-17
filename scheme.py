@@ -1,18 +1,21 @@
-import enum
-from datetime import datetime
-from enum import Enum
-
+from typing import Optional
+from datetime import date
 from pydantic import BaseModel
-from sqlalchemy import TIMESTAMP
-
 
 
 class ShoppingCartItem(BaseModel):
     book_id: int
     quantity: int
 
-
-class Review(BaseModel):
-    book_id: int
-    rating: int
-    comment: str
+class BooksList(BaseModel):
+    id: int
+    special_book_id: int
+    title: str
+    author: str
+    publication_date: date
+    quantity: int
+    description: Optional[str]
+    price: float
+    barcode: str
+    language: str
+    category: str

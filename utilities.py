@@ -1,10 +1,11 @@
 import secrets
 from datetime import datetime, timedelta
 
-from fastapi import Depends, HTTPException, UploadFile
+from fastapi import Depends, HTTPException
 import aiofiles
 from config import SECRET
 import jwt
+import os
 
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
@@ -45,3 +46,9 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
         raise HTTPException(status_code=401, detail='Token is expired!')
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail='Token invalid!')
+
+
+# Directory for storing uploaded files
+
+UPLOAD_DIR = "uploads/images"
+os.makedirs(UPLOAD_DIR, exist_ok=True)

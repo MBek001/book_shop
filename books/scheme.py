@@ -1,6 +1,6 @@
 import datetime
 import enum
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel
 
@@ -33,3 +33,5 @@ class BooksList(BaseModel):
     quantity: int
     language: str
     average_rating: Optional[float]=None,
+    added_at: Optional[datetime.datetime]=None
+    photos: Optional[List[str]]=None

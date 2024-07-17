@@ -1,12 +1,11 @@
 import enum
 from sqlalchemy import Table, MetaData, Column, String, Integer, Text, Boolean, Date, ForeignKey, Float, DECIMAL, Enum, \
-    TIMESTAMP, DATETIME
+    TIMESTAMP, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime, date
 
 Base = declarative_base()
 metadata = MetaData()
-
 
 # User Table
 user = Table(
@@ -19,6 +18,14 @@ user = Table(
     Column('phone_number', String),
     Column('is_admin',Boolean,default=False),
     Column('date_joined', Date, default=date.today),
+)
+
+superuser = Table(
+    'superuser',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('is_superuser', Boolean, default=False),
 )
 
 # Book Table
@@ -35,8 +42,25 @@ book = Table(
     Column('price', Float, default=0),
     Column('quantity', Integer, default=0),
     Column('language', String, default="Russian"),
+    Column('added_at', TIMESTAMP, default=datetime.utcnow()),
     Column('barcode', String, index=True)
 )
+
+#Age categories
+age_categories = Table(
+    'age_category',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('ages', String, unique=True, index=True)
+)
+
+categories = Table(
+    'category',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('category_name', String, unique=True, index=True),
+)
+
 
 # Wishlist Table
 wishlist = Table(
@@ -79,8 +103,7 @@ review = Table(
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('user_id', Integer, ForeignKey('users.id')),
     Column('book_id', Integer, ForeignKey('books.id')),
-    Column('rating', Integer, default=0),
-    Column('comment', String,default='no comments yet'),
+    Column('comments', String,default='no comments yet'),
     Column('review_date', TIMESTAMP, default=datetime.utcnow)
 )
 
@@ -114,32 +137,22 @@ images = Table(
     'images',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
+    Column ('book_id', Integer, ForeignKey("books.id")),
     Column('photo_url', String)
 )
 
-image_items = Table(
-    'image_item',
+
+
+rate = Table(
+    'rates',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('user_id', Integer, ForeignKey('users.id')),
     Column('book_id', Integer, ForeignKey('books.id')),
-    Column('photo_id', Integer, ForeignKey('images.id'))
-)
-
-#Age categories
-age_categories = Table(
-    'age_category',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('ages', String, unique=True, index=True)
+    Column('rating', Integer, default=1)
 )
 
 
-categories = Table(
-    'category',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('category_name', String, unique=True, index=True),
-)
 
 categories_in_ages = Table(
     'categories_in_ages',

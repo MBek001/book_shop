@@ -41,6 +41,12 @@ class Books_in_category(BaseModel):
     language: str
 
 
+class GetAgeCategory(BaseModel):
+    id: int
+    ages: str
+
+
+
 
 
 

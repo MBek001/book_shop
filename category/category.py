@@ -6,7 +6,7 @@ from sqlalchemy import select, update,insert, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from utilities import generate_token, verify_token
 from database import get_async_session
-from models.model import age_categories, user, categories, categories_in_ages,book
+from models.model import *
 
 from category.scheme import *
 
@@ -112,14 +112,31 @@ async def add_category(
         raise HTTPException(status_code=400, detail='Category already exists')
 
 
+@category_router.get('/age-category', response_model=List[GetAgeCategory])
+async def get_age_category(
+        session: AsyncSession = Depends(get_async_session)
+):
+    query = select(age_categories)
+    result = await session.execute(query)
+    age_categories_list = result.fetchall()
+
+    age_categories_list = [
+        {
+            "id": age_category.id,
+            "ages": age_category.ages,
+        }
+        for age_category in age_categories_list
+    ]
+
+    return age_categories_list
+
+
+
 
 @category_router.get('/all_categories', response_model=List[CategoryList])
 async def get_categories(
         session: AsyncSession = Depends(get_async_session),
-        token: dict = Depends(verify_token)
 ):
-    if token is None:
-        return HTTPException(status_code=403, detail='Forbidden')
 
     all_category = await session.execute(select(categories))
     return all_category.fetchall()
