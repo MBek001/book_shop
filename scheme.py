@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 from pydantic import BaseModel
 
@@ -6,6 +6,7 @@ from pydantic import BaseModel
 class ShoppingCartItem(BaseModel):
     book_id: int
     quantity: int
+
 
 class BooksList(BaseModel):
     id: int
@@ -19,4 +20,5 @@ class BooksList(BaseModel):
     barcode: str
     language: str
     category: str
+    photo_url: Optional[List[str]]
 

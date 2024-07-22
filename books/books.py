@@ -1,20 +1,18 @@
 from datetime import datetime
-from typing import List,Optional
-
-from dateutil.parser import parse
 
 from sqlalchemy import update, select, func, delete, insert
 from starlette import status
-from fastapi import FastAPI, APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 
 from sqlalchemy.ext.asyncio import AsyncSession
-import shutil
 from utilities import verify_token
 from database import get_async_session
-from models.model import *
+from models.model import book, user, categories, rate, review, images, superuser
 from category.scheme import CategoryEnum
 import aiofiles
 from utilities import UPLOAD_DIR
+
+from dateutil.parser import parse
 
 
 from books.scheme import *
@@ -38,7 +36,8 @@ async def add_book(
         session: AsyncSession = Depends(get_async_session)
 ):
     if token is None:
-        return HTTPException(status_code=403, detail='Forbidden')
+        raise HTTPException(status_code=403, detail='Forbidden')
+
     user_id = token.get('user_id')
     result = await session.execute(
         select(user).where(
@@ -59,29 +58,41 @@ async def add_book(
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Book with this TITLE and AUTHOR already exists')
 
     checking_book = await session.execute(
-        select(book).
-        where((book.c.special_book_id == special_book_id)|
-              (book.c.barcode == barcode)
-              )
+        select(book).where(
+            (book.c.special_book_id == special_book_id) |
+            (book.c.barcode == barcode)
+        )
     )
     if checking_book.scalar():
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='Book with this SPECIAL_BOOK_ID or BARCODE already exists')
 
-    selected_date = parse(publication_date).date()
-    barcode_info = len(barcode)
+    try:
+        selected_date = parse(publication_date).date()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Invalid publication date format')
 
-    if barcode_info<8 and barcode_info>13:
+    barcode_length = len(barcode)
+    if barcode_length < 8 or barcode_length > 13:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='Barcode should be between 8 and 13 digits')
 
+    category_query = await session.execute(select(categories).where(categories.c.category_name == category.value))
+    category_exists = category_query.fetchone()
 
-    query = book.insert().values(
+    if category_exists is None:
+        await session.execute(
+            insert(categories).values(
+                category_name=category.value
+            )
+        )
+
+    query = insert(book).values(
         special_book_id=special_book_id,
         title=title,
         author=author,
         publication_date=selected_date,
         category=str(category.value),
         description=description,
-        price= price,
+        price=price,
         quantity=quantity,
         barcode=barcode,
         language=str(language.value)

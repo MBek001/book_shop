@@ -1,0 +1,10 @@
+1 - rating bilan bogliq bolgan get zaproslar >>>
+2 - full get zaproslar >>>
+3 - orderga olish
+4 - wishlistga qoshish va kitoblar qancha qolganini tekshirib turish
+5 - karta qoshish va delete qilish
+6 - docker ulash agar zarur bolsa
+7 - payment qismi
+8 - HOME da topdeg 5 ta kitob chiqarish va yangi qoshlgan kitoblarni chiqarish va aksiyadailarni ham
+9 - promotion aksiya qsimini full qlb chiqish
+10- serverga qoyb tayyor qilib berish

@@ -42,7 +42,7 @@ book = Table(
     Column('price', Float, default=0),
     Column('quantity', Integer, default=0),
     Column('language', String, default="Russian"),
-    Column('added_at', TIMESTAMP, default=datetime.utcnow()),
+    Column('added_at', TIMESTAMP, default=datetime.utcnow),
     Column('barcode', String, index=True)
 )
 
@@ -79,6 +79,7 @@ order = Table(
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('user_id', Integer, ForeignKey('users.id')),
+    Column('shopping_cart_id', Integer, ForeignKey('shopping_cart.id')),
     Column('order_date', TIMESTAMP, default=datetime.utcnow),
     Column('address', String),
     Column('order_status', String),
@@ -94,6 +95,8 @@ shopping_cart = Table(
     Column('user_id', Integer, ForeignKey('users.id')),
     Column('book_id', Integer, ForeignKey('books.id')),
     Column('quantity', Integer),
+    Column('amount', Float),
+    Column('created_at', TIMESTAMP, default=datetime.utcnow)
 )
 
 # Review Table
@@ -105,19 +108,6 @@ review = Table(
     Column('book_id', Integer, ForeignKey('books.id')),
     Column('comments', String,default='no comments yet'),
     Column('review_date', TIMESTAMP, default=datetime.utcnow)
-)
-
-
-# Payment Table
-payment = Table(
-    'payments',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('order_id', Integer, ForeignKey('orders.id')),
-    Column('payment_date', TIMESTAMP, default=datetime.utcnow),
-    Column('amount', Float),
-    Column('payment_method', String),
-    Column('payment_status', String)
 )
 
 # Promotion Table

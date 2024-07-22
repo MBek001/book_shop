@@ -131,13 +131,10 @@ async def get_age_category(
     return age_categories_list
 
 
-
-
 @category_router.get('/all_categories', response_model=List[CategoryList])
 async def get_categories(
         session: AsyncSession = Depends(get_async_session),
 ):
-
     all_category = await session.execute(select(categories))
     return all_category.fetchall()
 
@@ -146,16 +143,6 @@ async def get_categories(
 async def get_books_in_category(
         category_enum: CategoryEnum,
         session: AsyncSession = Depends(get_async_session),
-        token: dict = Depends(verify_token)
 ):
-    if token is None:
-        return HTTPException(status_code=403, detail='Forbidden')
-    user_id = token.get('user_id')
-    usr = await session.execute(
-        select(user).
-        where(user.c.id == user_id))
-
-    if not usr.scalar():
-        raise HTTPException(status_code=403, detail='Forbidden')
-    books_in_category = await session.execute(select(book).where(book.c.category == category_enum.value))
+    books_in_category = await session.execute(select(book).where(book.c.category == category_enum.value).order_by(book.c.id))
     return books_in_category.fetchall()
