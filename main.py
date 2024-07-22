@@ -147,41 +147,9 @@ async def home(
     }
 
 
-@router.get('/get-comments')
-async def get_reviews(
-        book_id: int,
-        session: AsyncSession = Depends(get_async_session)
-):
-    book_result = await session.execute(
-        select(book).where(book.c.id == book_id)
-    )
-    if not book_result.scalar():
-        raise HTTPException(status_code=404, detail='Book not found')
-
-    # Sharhlarni olish
-    reviews_result = await session.execute(
-        select(review).where(review.c.book_id == book_id)
-    )
-
-    reviews = reviews_result.fetchall()
-    print('review', reviews)
-
-
-
-    return [
-        {
-            "user_id": review.user_id,
-            "comments": review.comments,
-            "review_date": review.review_date
-        }
-        for review in reviews
-    ]
-
-
 @router.post('/add-comment')
 async def add_review(
         book_id: int,
-        rating:int,
         comment: str,
         token: dict = Depends(verify_token),
         session: AsyncSession = Depends(get_async_session)
@@ -202,20 +170,42 @@ async def add_review(
     if not book_result.scalar():
         raise HTTPException(status_code=404, detail='Book not found')
 
-    if rating < 1 or rating > 5:
-        raise HTTPException(status_code=400, detail='Rating must be between 1 and 5')
-
     insert_query = review.insert().values(
         user_id=user_id,
         book_id=book_id,
-        rating=rating,
-        comment=comment,
+        comments=comment,
         review_date=datetime.utcnow()
     )
     await session.execute(insert_query)
     await session.commit()
 
     return {'message': 'Review added successfully'}
+
+
+@router.get('/get-comments')
+async def get_reviews(
+        book_id: int,
+        session: AsyncSession = Depends(get_async_session)
+):
+    book_result = await session.execute(
+        select(book).where(book.c.id == book_id)
+    )
+    if not book_result.scalar():
+        raise HTTPException(status_code=404, detail='Book not found')
+
+    reviews_result = await session.execute(
+        select(review).where(review.c.book_id == book_id)
+    )
+
+    reviews = reviews_result.fetchall()
+    return [
+        {
+            "user_id": review.user_id,
+            "comments": review.comments,
+            "review_date": review.review_date
+        }
+        for review in reviews
+    ]
 
 
 @router.post("/book-rating")
@@ -250,6 +240,42 @@ async def create_rate(
     await session.commit()
 
     return {"message": "Rating created successfully"}
+
+
+@router.get('/get-rating')
+async def get_rating(
+        session: AsyncSession = Depends(get_async_session),
+        token: dict = Depends(verify_token)
+):
+    if token is None:
+        raise HTTPException(status_code=403, detail='Forbidden')
+
+    user_id = token.get('user_id')
+
+    is_admin_query = await session.execute(select(user).where(
+        (user.c.id == user_id) &
+        (user.c.is_admin == True)
+    ))
+
+    if not is_admin_query.scalar():
+        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+    rating_query = await session.execute(
+        select(rate).order_by(rate.c.id))
+    ratings = rating_query.fetchall()
+
+    response = []
+    for rating in ratings:
+        book_query = await session.execute(select(book.c.title).where(book.c.id == rating.book_id))
+        book_title = book_query.scalar()
+
+        response.append({
+            "user_id": rating.user_id,
+            "book": book_title,
+            "rating": rating.rating
+        })
+
+    return response
 
 
 @router.post('/add-to-cart')

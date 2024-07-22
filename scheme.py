@@ -22,3 +22,4 @@ class BooksList(BaseModel):
     category: str
     photo_url: Optional[List[str]]
 
+
