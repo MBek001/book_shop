@@ -19,7 +19,6 @@ pwd_contex = CryptContext(schemes=['bcrypt'], deprecated='auto')
 register_router = APIRouter(tags=['auth'])
 
 
-
 @register_router.post('/registration')
 async def register(
         user_data: UserRegister,
@@ -71,7 +70,6 @@ async def login(
             return token
         else:
             return {'success': False, 'message': 'Email or Password is not correct ❗️'}
-
 
 
 @register_router.patch('/edit-profile')
@@ -186,6 +184,7 @@ async def search_users(
 
     return users_list
 
+
 @register_router.get('/user_info', response_model=List[GetUSerInfo])
 async def get_user_info(
         session: AsyncSession = Depends(get_async_session),
@@ -200,7 +199,6 @@ async def get_user_info(
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
     result = await session.execute(select(user).where(user.c.id == user_id))
     return result.fetchall()
-
 
 
 @register_router.get('/all_users_info', response_model=List[AllUserInfo])
@@ -220,12 +218,3 @@ async def get_users(
     result = await session.execute(select(user))
     return result.fetchall()
 
-
-
-
-
-
-
-
-
-app.include_router(register_router)

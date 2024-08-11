@@ -330,7 +330,6 @@ async def delete_image(
     return {"message": "Images deleted successfully"}
 
 
-
 @BOOK_router.patch('/increment-quantity')
 async def increment_quantity(
         book_id: int,

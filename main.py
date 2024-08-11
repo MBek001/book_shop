@@ -553,7 +553,7 @@ async def search_books(
     return books_list
 
 
-####### Middleware
+####### Middleware for incoming request hosts
 
 
 # Add CORS middleware
