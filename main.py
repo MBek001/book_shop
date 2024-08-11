@@ -21,7 +21,7 @@ from books.books import BOOK_router
 from superuser import role_router
 
 
-app = FastAPI()
+app = FastAPI(title='Book Shop')
 router = APIRouter()
 
 

@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.ext.asyncio import AsyncSession
 from utilities import verify_token
 from database import get_async_session
-from models.model import book, user, categories, rate, review, images, superuser
-from category.scheme import CategoryEnum
+from models.model import book, user, categories, rate, review, images, superuser,books_in_ages
+from category.scheme import CategoryEnum, AgesEnum
 import aiofiles
 from utilities import UPLOAD_DIR
 
@@ -19,6 +19,7 @@ from books.scheme import *
 
 BOOK_router = APIRouter(tags=['books'])
 
+from sqlalchemy import insert, select
 
 @BOOK_router.post('/add-book')
 async def add_book(
@@ -27,6 +28,7 @@ async def add_book(
         author: str,
         publication_date: str,
         quantity: int,
+        age: AgesEnum,
         category: CategoryEnum,
         description: str,
         price: float,
@@ -85,6 +87,7 @@ async def add_book(
             )
         )
 
+    # Insert the book into the book table
     query = insert(book).values(
         special_book_id=special_book_id,
         title=title,
@@ -97,17 +100,32 @@ async def add_book(
         barcode=barcode,
         language=str(language.value)
     )
-    await session.execute(query)
+    result = await session.execute(query)
+
+    new_book_id = result.inserted_primary_key[0]
+    age_book_exists_query = await session.execute(
+        select(books_in_ages).where(
+            (books_in_ages.c.book_id == new_book_id) &
+            (books_in_ages.c.ages == age.value)
+        )
+    )
+    age_query = await session.execute(insert(books_in_ages).values(
+        ages=age.value,
+        book_id=new_book_id
+    ))
+
+    if age_book_exists_query.scalar():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,
+                            detail='This book is already associated with the selected age category')
+
     await session.commit()
 
     return {"message": "Book added successfully"}
 
 
-
-@BOOK_router.get('/get-books', response_model=List[BooksList])
+@BOOK_router.get('/get-books')
 async def get_books(session: AsyncSession = Depends(get_async_session)):
 
-    # Main query to get books and average rating
     query = select(
         book.c.id,
         book.c.special_book_id,
@@ -129,14 +147,11 @@ async def get_books(session: AsyncSession = Depends(get_async_session)):
     ).order_by(
         book.c.id
     )
-
     books = await session.execute(query)
     books_list = books.fetchall()
 
-    # Get book ids to fetch photos
     book_ids = [b.id for b in books_list]
 
-    # Query to get photos
     photo_query = select(images).where(images.c.book_id.in_(book_ids))
     photo_result = await session.execute(photo_query)
     photos_by_book_id = {book_id: [] for book_id in book_ids}
@@ -144,7 +159,17 @@ async def get_books(session: AsyncSession = Depends(get_async_session)):
     for photo in photo_result.fetchall():
         photos_by_book_id[photo.book_id].append(photo.photo_url)
 
-    # Convert the result to a list of dictionaries
+    age_query = select(
+        books_in_ages.c.book_id,
+        books_in_ages.c.ages
+    ).where(books_in_ages.c.book_id.in_(book_ids))
+
+    age_result = await session.execute(age_query)
+    ages_by_book_id = {book_id: [] for book_id in book_ids}
+
+    for age in age_result.fetchall():
+        ages_by_book_id[age.book_id].append(age.ages)
+
     books_list = [
         {
             "id": b.id,
@@ -157,6 +182,7 @@ async def get_books(session: AsyncSession = Depends(get_async_session)):
             "price": b.price,
             "barcode": b.barcode,
             "language": b.language,
+            "ages": ages_by_book_id.get(b.id),
             "category": b.category,
             "average_rating": b.average_rating if b.average_rating is not None else 0,
             "added_at": b.added_at.strftime('%Y-%m-%d %H:%M:%S') if b.added_at else None,

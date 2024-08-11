@@ -46,14 +46,6 @@ book = Table(
     Column('barcode', String, index=True)
 )
 
-#Age categories
-age_categories = Table(
-    'age_category',
-    metadata,
-    Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('ages', String, unique=True, index=True)
-)
-
 categories = Table(
     'category',
     metadata,
@@ -143,13 +135,12 @@ rate = Table(
 )
 
 
-
-categories_in_ages = Table(
-    'categories_in_ages',
+books_in_ages = Table(
+    'books_in_ages',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('age_id', Integer, ForeignKey('age_category.id')),
-    Column('category_id', Integer, ForeignKey('category.id'))
+    Column('ages', String ),
+    Column('book_id', Integer, ForeignKey('books.id'))
 )
 
 

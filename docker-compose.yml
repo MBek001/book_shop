@@ -1,0 +1,47 @@
+services:
+  fastapi:
+    build: .
+    container_name: book_shop
+    command: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+    volumes:
+      - .:/app
+      - media_volume:/media
+    env_file:
+      - ./.env
+    environment:
+      - DATABASE_URL=postgresql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+    ports:
+      - '8000:8000'
+    depends_on:
+      - db
+
+  db:
+    container_name: database
+    image: postgres:15.0-alpine
+    expose:
+      - 5432
+    env_file:
+      - ./.env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  nginx:
+    build: ./nginx
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+    volumes:
+      - media_volume:/media
+    ports:
+      - "443:443"
+    depends_on:
+      - fastapi
+
+volumes:
+  media_volume:
+  postgres_data:
