@@ -8,6 +8,7 @@ from starlette import status
 from fastapi import FastAPI, APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import or_
+from starlette.middleware.cors import CORSMiddleware
 
 from models.model import review
 from utilities import verify_token
@@ -552,6 +553,17 @@ async def search_books(
     return books_list
 
 
+####### Middleware
+
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or ["*"] to allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # or list specific methods like ["GET", "POST"]
+    allow_headers=["*"],  # or list specific headers
+)
 
 
 app.include_router(search_router, tags=['Search'])
