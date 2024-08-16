@@ -14,7 +14,7 @@ from sqlalchemy.sql import or_
 from passlib.context import CryptContext
 
 app = FastAPI(title='Task', version='1.0.0')
-pwd_contex = CryptContext(schemes=['bcrypt'], deprecated='auto')
+pwd_context = CryptContext(schemes=['bcrypt'], deprecated='auto')
 
 register_router = APIRouter(tags=['auth'])
 
@@ -36,7 +36,7 @@ async def register(
         if email_exists_value is not None:
             return {'success': False, 'message': 'Email already exists!'}
 
-        hash_password = pwd_contex.hash(user_data.password1)
+        hash_password = pwd_context.hash(user_data.password1)
 
         result = await session.execute(select(user.c.id))
         first_user = result.scalar()
@@ -59,15 +59,22 @@ async def login(
         user_data: UserLogin,
         session: AsyncSession = Depends(get_async_session)
 ):
-    email = select(user).where(user.c.email == user_data.email)
-    userdata = await session.execute(email)
+    email_query = select(user).where(user.c.email == user_data.email)
+    userdata = await session.execute(email_query)
     user_d = userdata.one_or_none()
+
     if user_d is None:
         return {'success': False, 'message': 'Email or Password is not correct ❗️'}
     else:
-        if pwd_contex.verify(user_data.password, user_d.password):
+        if pwd_context.verify(user_data.password, user_d.password):
             token = generate_token(user_d.id)
-            return token
+            if user_d.is_admin:
+                return {
+                    "role": "admin",
+                    "token": token
+                }
+            else:
+                return {"token": token}
         else:
             return {'success': False, 'message': 'Email or Password is not correct ❗️'}
 
