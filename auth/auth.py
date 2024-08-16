@@ -74,7 +74,8 @@ async def login(
                     "token": token
                 }
             else:
-                return {"token": token}
+                return {"role":"user",
+                        "token": token}
         else:
             return {'success': False, 'message': 'Email or Password is not correct ❗️'}
 
