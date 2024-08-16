@@ -279,7 +279,7 @@ async def upload_image(
         raise HTTPException(status_code=404, detail="Book not found")
 
     # Save the uploaded file
-    file_location = f"{UPLOAD_DIR}/{file.filename}"
+    file_location = f"{file.filename}"
     async with aiofiles.open(file_location, "wb") as buffer:
         content = await file.read()
         await buffer.write(content)
