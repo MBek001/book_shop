@@ -50,9 +50,11 @@ class GetUSerInfo(BaseModel):
     email: str
     phone_number: str
 
+
 class UserLogin(BaseModel):
     email: str
     password: str
+
 
 class AllUserInfo(BaseModel):
     id: int
@@ -60,7 +62,8 @@ class AllUserInfo(BaseModel):
     email: str
     phone_number: str
     is_admin: bool
-    # date_joined: datetime
+    date_joined: date
+
 
 class UserList(BaseModel):
     id: int
