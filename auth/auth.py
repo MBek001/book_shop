@@ -226,3 +226,41 @@ async def get_users(
     result = await session.execute(select(user))
     return result.fetchall()
 
+
+@register_router.delete('/delete-user')
+async def delete_user(user_id:int,
+                      session: AsyncSession = Depends(get_async_session),
+                      token: dict = Depends(verify_token)
+                      ):
+    if token is None:
+        raise HTTPException(status_code=403, detail='Forbidden')
+
+    usr_id = token.get('user_id')
+
+    is_admin = await session.execute(select(user).where(
+        (user.c.id == usr_id)&
+        (user.c.is_admin == True)
+    ))
+
+    if not is_admin.scalar():
+        raise HTTPException(status_code=405, detail="Method Not Allowed")
+
+    is_user = await session.execute(select(user).where(user.c.id == user_id))
+
+    if not is_user.scalar():
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await session.execute(delete(rate).where(rate.c.user_id == user_id))
+    await session.execute(delete(review).where(review.c.user_id == user_id))
+    await session.execute(delete(shopping_cart).where(shopping_cart.c.user_id == user_id))
+    await session.execute(delete(order).where(order.c.user_id == user_id))
+    await session.execute(delete(wishlist).where(wishlist.c.user_id == user_id))
+    await session.execute(delete(superuser).where(superuser.c.user_id == user_id))
+    await session.execute(delete(user_address).where(user_address.c.user_id == user_id))
+
+    await session.execute(delete(user).where(user.c.id == user_id))
+    await session.commit()
+    return {'success': True, 'message': 'User deleted successfully!'}
+
+
+

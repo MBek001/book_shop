@@ -186,19 +186,15 @@ async def get_books(session: AsyncSession = Depends(get_async_session)):
             "category": b.category,
             "average_rating": b.average_rating if b.average_rating is not None else 0,
             "added_at": b.added_at.strftime('%Y-%m-%d %H:%M:%S') if b.added_at else None,
-            "photos": photos_by_book_id.get(b.id, [])
+            "photos": photos_by_book_id.get(b.id)
         }
         for b in books_list
     ]
 
     return books_list
-
-
 @BOOK_router.delete('/delete-book')
 async def delete_book(
-        special_book_id: Optional[int] = None,
-        title: Optional[str] = None,
-        book_id: Optional[int] = None,
+        book_id: int,
         token: dict = Depends(verify_token),
         session: AsyncSession = Depends(get_async_session)
 ):
@@ -206,49 +202,38 @@ async def delete_book(
         raise HTTPException(status_code=403, detail='Forbidden')
 
     user_id = token.get('user_id')
-    result = await session.execute(
+    user_check = await session.execute(
         select(user).where(
             (user.c.id == user_id) &
             (user.c.is_admin == True)
         )
     )
-    if not result.scalar():
+
+    if not user_check.scalar():
         raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    # Build the query based on provided parameters
-    if special_book_id:
-        book_query = select(book).where(book.c.special_book_id == special_book_id)
-    elif title:
-        book_query = select(book).where(book.c.title == title)
-    elif book_id:
-        book_query = select(book).where(book.c.id == book_id)
-    else:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
-                            detail='Provide at least one identifier (special_book_id, title, or book_id)')
-
+    book_query = select(book).where(book.c.id == book_id)
     existing_book = await session.execute(book_query)
     book_to_delete = existing_book.scalar_one_or_none()
+
     if book_to_delete is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Book not found')
 
+    # Delete associated records in books_in_ages first
+    await session.execute(delete(books_in_ages).where(books_in_ages.c.book_id == book_id))
 
-    # Delete associated reviews first
-    await session.execute(delete(rate).where(rate.c.book_id == book_to_delete))
-    await session.execute(delete(review).where(review.c.book_id == book_to_delete))
-    await session.execute(delete(images).where(images.c.book_id == book_to_delete))
+    # Delete associated reviews, ratings, and images
+    await session.execute(delete(rate).where(rate.c.book_id == book_id))
+    await session.execute(delete(review).where(review.c.book_id == book_id))
+    await session.execute(delete(images).where(images.c.book_id == book_id))
 
-    # Then delete the book
-    if special_book_id:
-        delete_query = book.delete().where(book.c.special_book_id == special_book_id)
-    elif title:
-        delete_query = book.delete().where(book.c.title == title)
-    elif book_id:
-        delete_query = book.delete().where(book.c.id == book_id)
-
-    await session.execute(delete_query)
+    # Finally, delete the book
+    await session.execute(delete(book).where(book.c.id == book_id))
     await session.commit()
 
     return {"message": "Book deleted successfully"}
+
+
 
 
 @BOOK_router.post('/upload-image')

@@ -143,5 +143,14 @@ books_in_ages = Table(
     Column('book_id', Integer, ForeignKey('books.id'))
 )
 
+user_address = Table(
+    'suer_address',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('address', String),
+    Column('date_added', TIMESTAMP,default=datetime.utcnow)
+)
+
 
 
