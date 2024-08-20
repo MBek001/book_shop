@@ -46,6 +46,7 @@ class UserDb(BaseModel):
 
 
 class GetUSerInfo(BaseModel):
+    id: int
     name: str
     email: str
     phone_number: str
