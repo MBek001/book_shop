@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import update, select, func, delete, insert
 from starlette import status
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import FileResponse
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from utilities import verify_token
@@ -13,6 +14,7 @@ import aiofiles
 from utilities import UPLOAD_DIR
 
 from dateutil.parser import parse
+import os
 
 
 from books.scheme import *
@@ -235,26 +237,24 @@ async def delete_book(
 
 
 
-
 @BOOK_router.post('/upload-image')
 async def upload_image(
-        book_id: int,
-        file: UploadFile = File(...),
-        session: AsyncSession = Depends(get_async_session),
-        token: dict = Depends(verify_token)
+    book_id: int,
+    file: UploadFile = File(...),
+    session: AsyncSession = Depends(get_async_session),
+    token: dict = Depends(verify_token)
 ):
     if token is None:
         raise HTTPException(status_code=403, detail='Forbidden')
 
     user_id = token.get('user_id')
 
-    admin = await session.execute(select(user).where(
-        (user.c.id == user_id)&
-        (user.c.is_admin == True))
+    # Check if the user is an admin
+    result = await session.execute(
+        select(user).where(user.c.id == user_id, user.c.is_admin == True)
     )
-
-    if not admin.scalar():
-        raise HTTPException(status_code=status.HTTP_405_METHOD_NOT_ALLOWED)
+    if not result.scalar():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
 
     # Check if the book exists
     result = await session.execute(
@@ -263,9 +263,8 @@ async def upload_image(
     if not result.scalar():
         raise HTTPException(status_code=404, detail="Book not found")
 
-
     # Save the uploaded file
-    file_location = f"{file.filename}"
+    file_location = os.path.join(UPLOAD_DIR, file.filename)
     async with aiofiles.open(file_location, "wb") as buffer:
         content = await file.read()
         await buffer.write(content)
@@ -273,7 +272,7 @@ async def upload_image(
     # Insert the image information into the database
     query = insert(images).values(
         book_id=book_id,
-        photo_url=file_location
+        photo_url=f"/static/images/{file.filename}"
     )
     await session.execute(query)
     await session.commit()
@@ -415,3 +414,28 @@ async def decrement_quantity(
     await session.commit()
 
     return {"message": "Book quantity decremented successfully"}
+
+
+@BOOK_router.get('/download-image/')
+async def download_image(
+        file_name: str,
+        token: dict = Depends(verify_token),
+        session: AsyncSession = Depends(get_async_session)
+):
+    if token is None:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Fetch file information from the database
+    query = select(images).where(images.c.photo_url.like(f"%{file_name}"))
+    result = await session.execute(query)
+    file_data = result.fetchone()
+
+    if file_data is None:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found on server")
+
+    return FileResponse(path=file_path, media_type='application/octet-stream', filename=file_name)

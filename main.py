@@ -9,6 +9,7 @@ from fastapi import FastAPI, APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql import or_
 from starlette.middleware.cors import CORSMiddleware
+from starlette.staticfiles import StaticFiles
 
 from models.model import review
 from utilities import verify_token
@@ -565,7 +566,7 @@ app.add_middleware(
     allow_headers=["*"],  # or list specific headers
 )
 
-
+app.mount("/static", StaticFiles(directory="app/static/images"), name="static")
 app.include_router(search_router, tags=['Search'])
 app.include_router(register_router, prefix='/auth', tags=['auth'])
 app.include_router(role_router, tags=['superuser'])

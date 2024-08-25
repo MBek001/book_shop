@@ -50,5 +50,5 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
 
 # Directory for storing uploaded files
 
-UPLOAD_DIR = "uploads/images"
+UPLOAD_DIR = "app/static/images"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
