@@ -144,7 +144,7 @@ books_in_ages = Table(
 )
 
 user_address = Table(
-    'suer_address',
+    'user_address',
     metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
     Column('user_id', Integer, ForeignKey('users.id')),
